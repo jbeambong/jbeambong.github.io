@@ -1,4 +1,21 @@
 {
-  "name": "jordanbeambong",
+  "name": "boostr",
+  "version": "1.0.0",
+  "description": "IA pour les PME des Travaux Publics",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "yarn node server/index.js",
+    "dev": "yarn node --watch server/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.9.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  },
   "packageManager": "yarn@4.9.1"
 }

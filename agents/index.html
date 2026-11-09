@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ruche — mes agents IA</title>
+<meta name="description" content="Crée des agents IA en quelques clics, discute avec eux et fais-les travailler en équipe.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐝</text></svg>">
+<style>
+:root{
+  --bg:#0b0b0c; --panel:#121214; --panel-2:#18181b; --hover:#1f1f23; --line:#26262b;
+  --text:#ededf0; --muted:#9a9aa3; --faint:#6b6b74;
+  --accent:#f5b83d; --accent-ink:#1a1405; --danger:#ef5b5b; --ok:#4cc38a; --info:#5b9cf5;
+  --bubble-user:#2a2a30; --radius:14px;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+:root[data-theme="light"]{
+  --bg:#f7f7f8; --panel:#ffffff; --panel-2:#f1f1f3; --hover:#ececef; --line:#e2e2e6;
+  --text:#16161a; --muted:#5f5f68; --faint:#8a8a93; --bubble-user:#e9e9ee; --accent-ink:#1a1405;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.app{display:grid;grid-template-columns:300px 1fr;height:100dvh}
+.app.with-panel{grid-template-columns:300px 1fr 300px}
+
+/* ---------- Sidebar ---------- */
+.sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;padding:16px 16px 8px;font-weight:700;font-size:17px;letter-spacing:-.01em}
+.brand .logo{width:30px;height:30px;border-radius:9px;background:var(--accent);display:grid;place-items:center;font-size:17px}
+.brand .sp{flex:1}
+.icon-btn{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--muted)}
+.icon-btn:hover{background:var(--hover);color:var(--text)}
+.new-row{display:flex;gap:8px;padding:8px 12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 14px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);font-weight:600;font-size:14px;white-space:nowrap}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--danger)}
+.btn.grow{flex:1}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.search{margin:6px 12px 4px;position:relative}
+.search input{width:100%;padding:9px 12px 9px 34px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);outline:none}
+.search input:focus{border-color:var(--faint)}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--faint)}
+.list{flex:1;overflow-y:auto;padding:4px 8px 12px}
+.section-title{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:14px 10px 6px}
+.section-title button{color:var(--faint);font-size:18px;line-height:1;padding:0 4px;border-radius:6px}
+.section-title button:hover{color:var(--text);background:var(--hover)}
+.item{display:flex;gap:11px;align-items:center;width:100%;text-align:left;padding:9px 10px;border-radius:12px}
+.item:hover{background:var(--hover)}
+.item.active{background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--line)}
+.item .meta{flex:1;min-width:0}
+.item .row1{display:flex;justify-content:space-between;gap:6px}
+.item .name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .time{font-size:11.5px;color:var(--faint);flex-shrink:0}
+.item .preview{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .badge{background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:700;border-radius:99px;padding:0 6px;margin-left:4px}
+.empty-list{color:var(--faint);font-size:13px;padding:6px 10px 2px}
+.side-foot{border-top:1px solid var(--line);padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex-shrink:0}
+.dot.on{background:var(--ok)}
+
+/* Avatars */
+.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:20px;flex-shrink:0;position:relative}
+.av.sm{width:28px;height:28px;font-size:15px}
+.av.xs{width:22px;height:22px;font-size:12px}
+.av.lg{width:64px;height:64px;font-size:32px}
+.stack{display:flex;flex-shrink:0;width:40px;height:40px;position:relative}
+.stack .av{position:absolute;width:28px;height:28px;font-size:14px;border:2px solid var(--panel)}
+.stack .av:nth-child(1){left:0;top:0}
+.stack .av:nth-child(2){right:0;bottom:0}
+.stack .av:nth-child(3){left:0;bottom:-2px;width:22px;height:22px;font-size:11px}
+.busy::after{content:"";position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;background:var(--accent);border:2px solid var(--panel);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+/* ---------- Main ---------- */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);min-height:64px}
+.topbar .title{font-weight:700;font-size:16px}
+.topbar .sub{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .grow{flex:1;min-width:0}
+.menu-btn{display:none}
+.messages{flex:1;overflow-y:auto;padding:24px 0 12px}
+.msgs-inner{max-width:780px;margin:0 auto;padding:0 20px}
+.msg{display:flex;gap:12px;margin:0 0 20px}
+.msg .body{min-width:0;flex:1}
+.msg .who{font-size:13px;font-weight:600;margin-bottom:3px;display:flex;gap:8px;align-items:baseline}
+.msg .who .role{color:var(--faint);font-weight:400;font-size:12px}
+.msg .content{word-wrap:break-word;overflow-wrap:anywhere}
+.msg.user{justify-content:flex-end}
+.msg.user .content{background:var(--bubble-user);padding:10px 15px;border-radius:18px 18px 4px 18px;max-width:85%;margin-left:auto}
+.msg.user .body{display:flex;flex-direction:column;align-items:flex-end}
+.msg.system{justify-content:center}
+.msg.system .content{font-size:12.5px;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);padding:5px 12px;border-radius:99px;text-align:center}
+.msg.error .content{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)}
+.content p{margin:0 0 .6em}.content p:last-child{margin:0}
+.content ul,.content ol{margin:.2em 0 .6em;padding-left:1.3em}
+.content code{font-family:var(--mono);font-size:.88em;background:var(--panel-2);padding:1px 5px;border-radius:5px}
+.content pre{background:var(--panel-2);border:1px solid var(--line);padding:12px 14px;border-radius:10px;overflow-x:auto;font-size:13px}
+.content pre code{background:none;padding:0}
+.content h3,.content h4{margin:.6em 0 .3em;font-size:1em}
+.mention{color:var(--accent);font-weight:600}
+.typing span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);margin-right:4px;animation:blink 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+.task-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:2px 10px;margin-bottom:6px}
+
+/* Welcome / empty */
+.hero{max-width:640px;margin:8vh auto 0;padding:0 20px;text-align:center}
+.hero h1{font-size:30px;letter-spacing:-.02em;margin:14px 0 6px}
+.hero p{color:var(--muted);margin:0 0 22px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:left;margin:26px 0}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.step b{display:block;margin-bottom:4px}
+.step span{font-size:13px;color:var(--muted)}
+.suggest{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+.suggest button{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:7px 14px;font-size:13.5px;color:var(--muted)}
+.suggest button:hover{color:var(--text);background:var(--hover)}
+
+/* Composer */
+.composer-wrap{padding:8px 20px 18px}
+.composer{max-width:780px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px;position:relative}
+.composer:focus-within{border-color:var(--faint)}
+.composer textarea{width:100%;resize:none;border:0;outline:none;background:transparent;max-height:200px;min-height:26px;padding:6px 0;line-height:1.45}
+.composer .bar{display:flex;align-items:center;gap:6px}
+.composer .bar .grow{flex:1}
+.pill{font-size:12.5px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.pill:hover{background:var(--hover);color:var(--text)}
+.pill.on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
+.send{width:38px;height:38px;border-radius:50%;background:var(--text);color:var(--bg);display:grid;place-items:center}
+.send:disabled{opacity:.3}
+.send.stop{background:var(--danger);color:#fff}
+.hint{max-width:780px;margin:6px auto 0;font-size:12px;color:var(--faint);text-align:center}
+.mention-pop{position:absolute;bottom:calc(100% + 6px);left:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;min-width:220px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none;z-index:5}
+.mention-pop.show{display:block}
+.mention-pop button{display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;border-radius:8px;text-align:left;font-size:14px}
+.mention-pop button.sel,.mention-pop button:hover{background:var(--hover)}
+
+/* Right panel */
+.panel{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:16px;display:none}
+.app.with-panel .panel{display:block}
+.panel h4{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);margin:18px 0 8px}
+.panel h4:first-child{margin-top:0}
+.member{display:flex;align-items:center;gap:10px;padding:6px 4px}
+.member .n{font-weight:600;font-size:14px}
+.member .r{font-size:12px;color:var(--muted)}
+.goal{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px;color:var(--muted);white-space:pre-wrap}
+.task{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);margin-bottom:7px;font-size:13.5px}
+.task .st{width:18px;height:18px;border-radius:50%;border:2px solid var(--faint);flex-shrink:0;margin-top:1px;display:grid;place-items:center;font-size:11px}
+.task.doing .st{border-color:var(--accent);border-top-color:transparent;animation:spin 1s linear infinite}
+.task.done .st{background:var(--ok);border-color:var(--ok);color:#06210f}
+.task.done .t{color:var(--muted);text-decoration:line-through}
+.task .who{font-size:12px;color:var(--faint);margin-top:2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress{height:6px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin:4px 0 10px}
+.progress div{height:100%;background:var(--ok);transition:width .3s}
+
+/* Modal */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.backdrop.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:18px;width:100%;max-width:620px;max-height:calc(100dvh - 32px);overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 6px}
+.modal header h2{margin:0;font-size:18px}
+.modal .mbody{padding:8px 20px 4px}
+.modal footer{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px 18px}
+.modal .lead{color:var(--muted);font-size:14px;margin:0 0 14px}
+label.f{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
+label.f small{font-weight:400;color:var(--faint)}
+.inp{width:100%;padding:10px 12px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);outline:none}
+.inp:focus{border-color:var(--faint)}
+textarea.inp{resize:vertical;min-height:90px;line-height:1.45}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.tpl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tpl{border:1px solid var(--line);background:var(--panel-2);border-radius:12px;padding:10px 6px;text-align:center;font-size:12.5px}
+.tpl .e{font-size:22px;display:block;margin-bottom:2px}
+.tpl:hover{background:var(--hover)}
+.tpl.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.emoji-row{display:flex;flex-wrap:wrap;gap:6px}
+.emoji-row button{width:36px;height:36px;border-radius:10px;font-size:19px;background:var(--panel-2);border:1px solid var(--line)}
+.emoji-row button.sel{border-color:var(--accent)}
+.pick{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.pick label{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);cursor:pointer;font-size:14px}
+.pick input{accent-color:var(--accent)}
+.pick label:has(input:checked){border-color:var(--accent)}
+.note{font-size:12.5px;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-top:12px}
+.note a{color:var(--accent)}
+.seg{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:3px}
+.seg button{flex:1;padding:7px;border-radius:8px;font-size:13px;color:var(--muted)}
+.seg button.sel{background:var(--hover);color:var(--text);font-weight:600}
+.toast{white-space:nowrap;position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:14px;z-index:80;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* Responsive */
+@media (max-width:1100px){
+  .app.with-panel{grid-template-columns:280px 1fr}
+  .app.with-panel .panel{display:none}
+  .app.panel-open .panel{display:block;position:fixed;right:0;top:0;bottom:0;width:min(320px,88vw);z-index:40;box-shadow:-10px 0 40px rgba(0,0,0,.4)}
+}
+@media (min-width:1101px){ .panel-toggle{display:none} }
+@media (max-width:760px){
+  .app,.app.with-panel{grid-template-columns:1fr}
+  .sidebar{position:fixed;inset:0 auto 0 0;width:min(320px,88vw);z-index:40;transform:translateX(-100%);transition:transform .2s;box-shadow:10px 0 40px rgba(0,0,0,.4)}
+  .app.side-open .sidebar{transform:none}
+  .menu-btn{display:grid}
+  .steps{grid-template-columns:1fr}
+  .tpl-grid{grid-template-columns:repeat(2,1fr)}
+  .pick{grid-template-columns:1fr}
+  .msgs-inner,.composer-wrap{padding-left:16px;padding-right:16px}
+  .topbar{padding:10px 12px}
+}
+.scrim{display:none}
+@media (max-width:1100px){ .app.panel-open .scrim,.app.side-open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:39} }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">🐝</div><span>Ruche</span><span class="sp"></span>
+      <button class="icon-btn" id="themeBtn" title="Thème clair/sombre" aria-label="Changer de thème">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+      <button class="icon-btn" id="settingsBtn" title="Réglages" aria-label="Réglages">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+    <div class="new-row">
+      <button class="btn primary grow" id="newAgentBtn">＋ Nouvel agent</button>
+      <button class="btn grow" id="newGroupBtn">👥 Groupe</button>
+    </div>
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" placeholder="Rechercher" autocomplete="off">
+    </div>
+    <div class="list" id="list"></div>
+    <div class="side-foot"><span class="dot" id="modeDot"></span><span id="modeLabel">Mode démo</span></div>
+  </aside>
+
+  <main class="main" id="main"></main>
+  <aside class="panel" id="panel"></aside>
+  <div class="scrim" id="scrim"></div>
+</div>
+
+<div class="backdrop" id="backdrop"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* =========================================================
+   Ruche — interface simple de création et de gestion d'agents
+   Tout est stocké dans le navigateur (localStorage).
+   ========================================================= */
+
+const SDK_URL = "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.3.0/+esm";
+const MODELS = [
+  { id: "claude-opus-5-5",   label: "Opus 5.5 — le plus intelligent" },
+  { id: "claude-sonnet-5-5", label: "Sonnet 5.5 — équilibré" },
+  { id: "claude-haiku-5-5",  label: "Haiku 5.5 — rapide et économique" },
+];
+const COLORS = ["#f5b83d","#5b9cf5","#4cc38a","#e46ca8","#9b7cf5","#f08a4b","#3fc1c9","#d6d65a"];
+const EMOJIS = ["🤖","🔎","✍️","💻","📊","🎯","🧠","🌍","🧐","🗂️","🎨","📣","⚖️","🧪","💡","🦉"];
+const TEMPLATES = [
+  { e:"🔎", name:"Chercheur",   role:"Recherche et synthèse",
+    instr:"Tu es un chercheur méthodique. Tu rassembles les faits importants, tu distingues ce qui est certain de ce qui est supposé et tu résumes en points clairs." },
+  { e:"✍️", name:"Rédacteur",   role:"Écriture et reformulation",
+    instr:"Tu es un rédacteur talentueux. Tu écris des textes clairs, vivants et adaptés au public visé. Tu proposes un titre et une structure." },
+  { e:"💻", name:"Développeur", role:"Code et technique",
+    instr:"Tu es un développeur senior. Tu écris du code propre et commenté, tu expliques simplement tes choix et tu signales les risques." },
+  { e:"📊", name:"Analyste",    role:"Chiffres et stratégie",
+    instr:"Tu es un analyste business. Tu poses des hypothèses chiffrées, tu compares les options et tu donnes une recommandation tranchée." },
+  { e:"🎯", name:"Chef de projet", role:"Organisation et coordination",
+    instr:"Tu es un chef de projet. Tu découpes les objectifs en étapes concrètes, tu assignes les tâches et tu fais la synthèse finale." },
+  { e:"🧐", name:"Critique",    role:"Relecture et contradiction",
+    instr:"Tu es un relecteur exigeant. Tu repères les failles, les oublis et les incohérences, puis tu proposes des corrections précises." },
+  { e:"🌍", name:"Traducteur",  role:"Traduction",
+    instr:"Tu es un traducteur professionnel. Tu traduis fidèlement en gardant le ton et les nuances, et tu signales les expressions difficiles." },
+  { e:"🧠", name:"Coach",       role:"Conseil et motivation",
+    instr:"Tu es un coach bienveillant mais direct. Tu poses de bonnes questions et tu proposes des actions concrètes à faire cette semaine." },
+];
+
+/* ---------------- State ---------------- */
+const KEY = "ruche:v1";
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} },
+};
+let S = store.get(KEY, null);
+if (!S) S = seed();
+S.settings ??= { apiKey:"", effort:"medium", theme:"dark", maxTurns:8 };
+let current = S.currentId || null;
+let running = null; // { convId, abort:AbortController }
+const save = () => { S.currentId = current; store.set(KEY, S); };
+
+function seed(){
+  const a1 = mkAgent(TEMPLATES[4], 0), a2 = mkAgent(TEMPLATES[0], 1), a3 = mkAgent(TEMPLATES[1], 2), a4 = mkAgent(TEMPLATES[5], 3);
+  const st = { agents:[a1,a2,a3,a4], convs:[], settings:{ apiKey:"", effort:"medium", theme:"dark", maxTurns:8 } };
+  return st;
+}
+function mkAgent(t, i){
+  return { id:uid(), name:t.name, emoji:t.e, color:COLORS[i % COLORS.length], role:t.role, instructions:t.instr, model:"claude-opus-5-5", created:Date.now() };
+}
+
+const agentById = id => S.agents.find(a => a.id === id);
+const convById = id => S.convs.find(c => c.id === id);
+function directConv(agentId){
+  let c = S.convs.find(c => c.type === "direct" && c.agentIds[0] === agentId);
+  if (!c){ c = { id:uid(), type:"direct", agentIds:[agentId], messages:[], tasks:[], updated:Date.now() }; S.convs.push(c); }
+  return c;
+}
+
+/* ---------------- Helpers ---------------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const toast = (t) => { const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("show"), 2200); };
+function timeAgo(ts){
+  if (!ts) return "";
+  const d = (Date.now() - ts) / 1000;
+  if (d < 60) return "à l'instant";
+  if (d < 3600) return Math.floor(d/60) + " min";
+  if (d < 86400) return new Date(ts).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+  return new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
+}
+function avatar(a, cls="", extra=""){
+  if (!a) return `<div class="av ${cls}" style="background:var(--panel-2);${extra}">❔</div>`;
+  const busy = running && running.speaking === a.id ? " busy" : "";
+  return `<div class="av ${cls}${busy}" style="background:${a.color}22;box-shadow:inset 0 0 0 1.5px ${a.color}55;${extra}">${esc(a.emoji)}</div>`;
+}
+function convTitle(c){ return c.type === "group" ? c.title : (agentById(c.agentIds[0])?.name || "Agent supprimé"); }
+function lastMsg(c){ return [...c.messages].reverse().find(m => m.author !== "system"); }
+function plain(md){ return String(md||"").replace(/```[\s\S]*?```/g,"[code]").replace(/[*_`#>]/g,"").replace(/\s+/g," ").trim(); }
+
+/* Mini Markdown (sûr : tout est échappé d'abord) */
+function md(src){
+  const blocks = [];
+  let s = String(src || "").replace(/```(\w*)\n?([\s\S]*?)```/g, (_, l, code) => { blocks.push(`<pre><code>${esc(code.replace(/\n$/,""))}</code></pre>`); return `\u0000${blocks.length-1}\u0000`; });
+  s = esc(s);
+  const inline = t => t
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+    .replace(/(^|[\s(>])@([\p{L}\p{N}_-]+)/gu, (m, p, n) => isAgentName(n) ? `${p}<span class="mention">@${n}</span>` : m)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const out = []; let list = null;
+  for (const line of s.split("\n")){
+    const ul = line.match(/^\s*[-*•]\s+(.*)/), ol = line.match(/^\s*\d+[.)]\s+(.*)/), h = line.match(/^#{1,4}\s+(.*)/);
+    if (ul || ol){
+      const type = ul ? "ul" : "ol";
+      if (!list || list.type !== type){ if (list) out.push(`</${list.type}>`); list = { type }; out.push(`<${type}>`); }
+      out.push(`<li>${inline((ul||ol)[1])}</li>`); continue;
+    }
+    if (list){ out.push(`</${list.type}>`); list = null; }
+    if (h) out.push(`<h4>${inline(h[1])}</h4>`);
+    else if (/^\u0000\d+\u0000$/.test(line.trim())) out.push(line.trim());
+    else if (line.trim() === "") out.push("");
+    else out.push(`<p>${inline(line)}</p>`);
+  }
+  if (list) out.push(`</${list.type}>`);
+  return out.join("\n").replace(/<\/p>\n<p>/g, "<br>").replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[+i]);
+}
+const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, "");
+const isAgentName = n => S.agents.some(a => norm(a.name) === norm(n));
+function mentionedAgents(text, pool){
+  const out = [];
+  for (const m of String(text).matchAll(/@([\p{L}\p{N}_-]+(?:\s[\p{L}\p{N}_-]+)?)/gu)){
+    const raw = m[1];
+    const a = pool.find(a => norm(raw).startsWith(norm(a.name)));
+    if (a && !out.includes(a)) out.push(a);
+  }
+  return out;
+}
+const handle = a => "@" + a.name.replace(/\s+/g, "");
+
+/* ---------------- Rendering ---------------- */
+function render(){
+  document.documentElement.dataset.theme = S.settings.theme;
+  renderList(); renderMain(); renderPanel(); renderMode();
+}
+function renderMode(){
+  const live = !!S.settings.apiKey;
+  $("#modeDot").classList.toggle("on", live);
+  $("#modeLabel").innerHTML = live ? "Connecté à Claude" : `Mode démo · <a href="#" id="setKey" style="color:var(--accent)">ajouter une clé API</a>`;
+  $("#setKey")?.addEventListener("click", e => { e.preventDefault(); openSettings(); });
+}
+
+function renderList(){
+  const q = norm($("#search").value || "");
+  const groups = S.convs.filter(c => c.type === "group").filter(c => !q || norm(c.title).includes(q)).sort((a,b) => b.updated - a.updated);
+  const agents = S.agents.filter(a => !q || norm(a.name + a.role).includes(q))
+    .map(a => ({ a, c: S.convs.find(c => c.type === "direct" && c.agentIds[0] === a.id) }))
+    .sort((x,y) => (y.c?.updated || y.a.created) - (x.c?.updated || x.a.created));
+
+  let h = `<div class="section-title">Groupes <button data-act="new-group" title="Nouveau groupe">+</button></div>`;
+  if (!groups.length) h += `<div class="empty-list">Aucun groupe. Réunis plusieurs agents pour qu'ils travaillent ensemble.</div>`;
+  for (const c of groups){
+    const members = c.agentIds.map(agentById).filter(Boolean);
+    const lm = lastMsg(c);
+    const who = lm ? (lm.author === "user" ? "Toi" : agentById(lm.author)?.name || "") : "";
+    const busy = running?.convId === c.id;
+    h += `<button class="item ${current === c.id ? "active" : ""}" data-open="${c.id}">
+      <div class="stack">${members.slice(0,3).map(a => avatar(a)).join("")}</div>
+      <div class="meta"><div class="row1"><span class="name">${esc(c.title)}</span><span class="time">${busy ? "● en cours" : timeAgo(c.updated)}</span></div>
+      <div class="preview">${lm ? esc(who + " : " + plain(lm.text)) : esc(members.map(a=>a.name).join(", "))}</div></div></button>`;
+  }
+  h += `<div class="section-title">Agents <button data-act="new-agent" title="Nouvel agent">+</button></div>`;
+  if (!agents.length) h += `<div class="empty-list">Aucun agent pour l'instant.</div>`;
+  for (const { a, c } of agents){
+    const lm = c && lastMsg(c);
+    const active = c && current === c.id;
+    h += `<button class="item ${active ? "active" : ""}" data-agent="${a.id}">
+      ${avatar(a)}
+      <div class="meta"><div class="row1"><span class="name">${esc(a.name)}</span><span class="time">${c ? timeAgo(c.updated) : ""}</span></div>
+      <div class="preview">${lm ? esc((lm.author === "user" ? "Toi : " : "") + plain(lm.text)) : esc(a.role || "Nouvel agent")}</div></div></button>`;
+  }
+  $("#list").innerHTML = h;
+}
+
+function renderMain(){
+  const c = current && convById(current);
+  const main = $("#main");
+  $("#app").classList.toggle("with-panel", !!c);
+  if (!c){ main.innerHTML = topbarHTML(null) + welcomeHTML(); bindMain(); return; }
+
+  const isGroup = c.type === "group";
+  const members = c.agentIds.map(agentById).filter(Boolean);
+  let msgs = "";
+  if (!c.messages.length){
+    msgs = isGroup
+      ? `<div class="hero" style="margin-top:4vh"><div style="display:flex;justify-content:center;gap:6px">${members.map(a=>avatar(a,"lg")).join("")}</div>
+         <h1>${esc(c.title)}</h1><p>Donne un objectif à l'équipe. ${esc(members[0]?.name || "Le chef")} découpe le travail, chaque agent prend sa tâche, ils échangent entre eux puis te rendent une synthèse.</p>
+         ${c.goal ? `<div class="suggest"><button data-fill="${esc(c.goal)}">▶ Lancer : « ${esc(c.goal.slice(0,80))}${c.goal.length>80?"…":""} »</button></div>` : ""}</div>`
+      : (() => { const a = members[0]; return `<div class="hero" style="margin-top:6vh">${avatar(a,"lg","margin:0 auto")}
+         <h1>${esc(a.name)}</h1><p>${esc(a.role || "")}</p>
+         <div class="suggest">${suggestionsFor(a).map(s => `<button data-fill="${esc(s)}">${esc(s)}</button>`).join("")}</div></div>`; })();
+  }
+  for (const m of c.messages) msgs += messageHTML(m, c);
+  if (running?.convId === c.id && running.speaking){
+    const a = agentById(running.speaking);
+    if (a && !c.messages.some(m => m.id === running.msgId)) msgs += `<div class="msg">${avatar(a,"sm")}<div class="body"><div class="who">${esc(a.name)}</div><div class="content typing"><span></span><span></span><span></span></div></div></div>`;
+  }
+  main.innerHTML = topbarHTML(c) + `<div class="messages" id="msgs"><div class="msgs-inner">${msgs}</div></div>` + composerHTML(c);
+  bindMain();
+  const box = $("#msgs"); box.scrollTop = box.scrollHeight;
+}
+
+function suggestionsFor(a){
+  const n = norm(a.name + a.role);
+  if (n.includes("dev") || n.includes("code")) return ["Explique-moi ce qu'est une API", "Écris un script qui renomme des fichiers", "Relis ce code"];
+  if (n.includes("redac") || n.includes("ecri")) return ["Écris un post LinkedIn sur l'IA", "Reformule ce paragraphe", "Propose 5 titres accrocheurs"];
+  if (n.includes("cherch")) return ["Résume l'état de l'IA en 2026", "Compare 3 outils de prise de notes", "Quelles sources fiables sur ce sujet ?"];
+  if (n.includes("analy")) return ["Analyse ce business model", "Fais un SWOT de mon idée", "Quel prix fixer pour mon offre ?"];
+  if (n.includes("chef") || n.includes("projet")) return ["Planifie le lancement d'un podcast", "Découpe ce projet en étapes", "Fais un rétroplanning sur 4 semaines"];
+  return ["Présente-toi", "Que peux-tu faire pour moi ?", "Aide-moi à démarrer"];
+}
+
+function topbarHTML(c){
+  const menu = `<button class="icon-btn menu-btn" data-act="menu" aria-label="Menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>`;
+  if (!c) return `<div class="topbar">${menu}<div class="grow"><div class="title">Accueil</div></div></div>`;
+  const members = c.agentIds.map(agentById).filter(Boolean);
+  const isGroup = c.type === "group";
+  const a = members[0];
+  const status = running?.convId === c.id ? (running.speaking ? `${agentById(running.speaking)?.name} écrit…` : "Au travail…") : (isGroup ? members.map(m => m.name).join(", ") : esc(a?.role || ""));
+  return `<div class="topbar">${menu}
+    ${isGroup ? `<div class="stack">${members.slice(0,3).map(m => avatar(m)).join("")}</div>` : avatar(a)}
+    <div class="grow"><div class="title">${esc(convTitle(c))}</div><div class="sub">${esc(status)}</div></div>
+    <button class="icon-btn panel-toggle" data-act="panel" title="Détails"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
+    <button class="icon-btn" data-act="${isGroup ? "edit-group" : "edit-agent"}" title="Modifier"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+  </div>`;
+}
+
+function welcomeHTML(){
+  return `<div class="messages"><div class="hero">
+    <div class="logo" style="width:64px;height:64px;border-radius:18px;background:var(--accent);display:grid;place-items:center;font-size:34px;margin:0 auto">🐝</div>
+    <h1>Tes agents IA, sans prise de tête</h1>
+    <p>Crée des assistants spécialisés, parle-leur comme sur une messagerie, et réunis-les en groupe pour qu'ils se répartissent le travail.</p>
+    <div class="steps">
+      <div class="step"><b>1. Crée un agent</b><span>Choisis un modèle (Chercheur, Rédacteur…) ou décris-le en une phrase.</span></div>
+      <div class="step"><b>2. Discute</b><span>Chaque agent a sa conversation dans la liste à gauche.</span></div>
+      <div class="step"><b>3. Fais un groupe</b><span>Donne un objectif : les agents se partagent les tâches et échangent entre eux.</span></div>
+    </div>
+    <div class="row" style="max-width:420px;margin:0 auto"><button class="btn primary" data-act="new-agent">＋ Créer un agent</button><button class="btn" data-act="demo-group">👥 Essayer un groupe</button></div>
+  </div></div>`;
+}
+
+function messageHTML(m, c){
+  if (m.author === "system") return `<div class="msg system ${m.error ? "error" : ""}"><div class="content">${md(m.text)}</div></div>`;
+  if (m.author === "user") return `<div class="msg user"><div class="body"><div class="content">${md(m.text)}</div></div></div>`;
+  const a = agentById(m.author);
+  const task = m.taskId && c.tasks.find(t => t.id === m.taskId);
+  return `<div class="msg" data-mid="${m.id}">${avatar(a,"sm")}<div class="body">
+    <div class="who">${esc(a?.name || "Agent supprimé")}<span class="role">${c.type === "group" ? esc(a?.role || "") : ""}</span></div>
+    ${task ? `<div class="task-chip">📌 ${esc(task.title)}</div>` : ""}
+    <div class="content">${m.text ? md(m.text) : `<span class="typing"><span></span><span></span><span></span></span>`}</div></div></div>`;
+}
+
+function composerHTML(c){
+  const busy = running?.convId === c.id;
+  const isGroup = c.type === "group";
+  const ph = isGroup ? "Donne un objectif à l'équipe, ou @mentionne un agent…" : `Écris à ${convTitle(c)}…`;
+  return `<div class="composer-wrap"><div class="composer">
+    <div class="mention-pop" id="mpop"></div>
+    <textarea id="input" rows="1" placeholder="${esc(ph)}"></textarea>
+    <div class="bar">
+      ${isGroup ? `<button class="pill ${c.auto !== false ? "on" : ""}" data-act="auto" title="Les agents enchaînent automatiquement">⚡ Collaboration auto ${c.auto !== false ? "activée" : "désactivée"}</button>` : ""}
+      <button class="pill" data-act="clear" title="Effacer la conversation">🧹 Effacer</button>
+      <span class="grow"></span>
+      ${busy ? `<button class="send stop" data-act="stop" title="Arrêter"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></button>`
+             : `<button class="send" id="sendBtn" title="Envoyer" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>`}
+    </div></div>
+    <div class="hint">${S.settings.apiKey ? "Entrée pour envoyer · Maj+Entrée pour aller à la ligne" : "Mode démo : réponses simulées. Ajoute une clé API dans ⚙️ pour de vraies réponses."}</div></div>`;
+}
+
+function renderPanel(){
+  const c = current && convById(current);
+  const p = $("#panel");
+  if (!c){ p.innerHTML = ""; return; }
+  const members = c.agentIds.map(agentById).filter(Boolean);
+  if (c.type === "direct"){
+    const a = members[0]; if (!a){ p.innerHTML = ""; return; }
+    const groups = S.convs.filter(g => g.type === "group" && g.agentIds.includes(a.id));
+    p.innerHTML = `<div style="text-align:center;padding:8px 0 4px">${avatar(a,"lg","margin:0 auto")}<div style="font-weight:700;font-size:17px;margin-top:8px">${esc(a.name)}</div><div style="color:var(--muted);font-size:13px">${esc(a.role)}</div></div>
+      <h4>Instructions</h4><div class="goal">${esc(a.instructions || "—")}</div>
+      <h4>Modèle</h4><div class="goal">${esc(MODELS.find(m => m.id === a.model)?.label || a.model)}</div>
+      <h4>Groupes</h4>${groups.length ? groups.map(g => `<button class="item" data-open="${g.id}"><div class="meta"><div class="name">👥 ${esc(g.title)}</div></div></button>`).join("") : `<div class="empty-list" style="padding:0">Dans aucun groupe.</div>`}
+      <div style="display:flex;gap:8px;margin-top:18px"><button class="btn grow" data-act="edit-agent">Modifier</button><button class="btn danger" data-act="del-agent">Supprimer</button></div>`;
+    return;
+  }
+  const done = c.tasks.filter(t => t.status === "done").length;
+  p.innerHTML = `<h4>Objectif</h4><div class="goal">${esc(c.goal || "Pas encore d'objectif : écris-le dans la conversation.")}</div>
+    <h4>Tâches ${c.tasks.length ? `· ${done}/${c.tasks.length}` : ""}</h4>
+    ${c.tasks.length ? `<div class="progress"><div style="width:${Math.round(done / c.tasks.length * 100)}%"></div></div>` : ""}
+    ${c.tasks.length ? c.tasks.map(t => { const a = agentById(t.assignee); return `<div class="task ${t.status}"><div class="st">${t.status === "done" ? "✓" : ""}</div><div><div class="t">${esc(t.title)}</div><div class="who">${a ? esc(a.emoji + " " + a.name) : "Non assignée"} · ${t.status === "done" ? "terminé" : t.status === "doing" ? "en cours" : "à faire"}</div></div></div>`; }).join("")
+      : `<div class="empty-list" style="padding:0">Les tâches apparaîtront ici quand le chef d'équipe aura découpé l'objectif.</div>`}
+    <h4>Membres</h4>
+    ${members.map((a, i) => `<div class="member">${avatar(a,"sm")}<div><div class="n">${esc(a.name)} ${i === 0 ? `<span style="font-size:11px;color:var(--accent)">★ chef</span>` : ""}</div><div class="r">${esc(a.role)}</div></div></div>`).join("")}
+    <div style="display:flex;gap:8px;margin-top:18px"><button class="btn grow" data-act="edit-group">Modifier le groupe</button><button class="btn danger" data-act="del-group">Supprimer</button></div>`;
+}
+
+/* ---------------- Events ---------------- */
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-act],[data-open],[data-agent],[data-fill]");
+  if (!t) return;
+  if (t.dataset.open){ openConv(t.dataset.open); return; }
+  if (t.dataset.agent){ openConv(directConv(t.dataset.agent).id); save(); return; }
+  if (t.dataset.fill != null){ const i = $("#input"); if (i){ i.value = t.dataset.fill; autosize(i); send(); } return; }
+  const act = t.dataset.act, c = current && convById(current);
+  switch (act){
+    case "new-agent": openAgentModal(); break;
+    case "new-group": openGroupModal(); break;
+    case "edit-agent": if (c) openAgentModal(agentById(c.agentIds[0])); break;
+    case "edit-group": if (c) openGroupModal(c); break;
+    case "del-agent": if (c) deleteAgent(c.agentIds[0]); break;
+    case "del-group": if (c && confirm(`Supprimer le groupe « ${c.title} » ?`)){ S.convs = S.convs.filter(x => x.id !== c.id); current = null; save(); render(); } break;
+    case "menu": $("#app").classList.toggle("side-open"); break;
+    case "panel": $("#app").classList.toggle("panel-open"); break;
+    case "auto": c.auto = c.auto === false; save(); renderMain(); break;
+    case "clear": if (c && confirm("Effacer tous les messages de cette conversation ?")){ c.messages = []; c.tasks = []; save(); render(); } break;
+    case "stop": running?.abort.abort(); break;
+    case "demo-group": demoGroup(); break;
+    case "close": closeModal(); break;
+  }
+});
+$("#scrim").addEventListener("click", () => $("#app").classList.remove("side-open","panel-open"));
+$("#newAgentBtn").onclick = () => openAgentModal();
+$("#newGroupBtn").onclick = () => openGroupModal();
+$("#settingsBtn").onclick = () => openSettings();
+$("#themeBtn").onclick = () => { S.settings.theme = S.settings.theme === "light" ? "dark" : "light"; save(); render(); };
+$("#search").oninput = renderList;
+$("#backdrop").addEventListener("mousedown", e => { if (e.target.id === "backdrop") closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+function openConv(id){ current = id; $("#app").classList.remove("side-open","panel-open"); save(); render(); $("#input")?.focus(); }
+
+function bindMain(){
+  const i = $("#input"); if (!i) return;
+  const btn = $("#sendBtn");
+  const c = convById(current);
+  i.addEventListener("input", () => { autosize(i); if (btn) btn.disabled = !i.value.trim(); mentionPopup(i, c); });
+  i.addEventListener("keydown", e => {
+    const pop = $("#mpop");
+    if (pop.classList.contains("show")){
+      const items = [...pop.querySelectorAll("button")]; let k = items.findIndex(b => b.classList.contains("sel"));
+      if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); items[k]?.classList.remove("sel"); k = (k + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length; items[k].classList.add("sel"); return; }
+      if (e.key === "Enter" || e.key === "Tab"){ e.preventDefault(); items[k]?.click(); return; }
+    }
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); send(); }
+  });
+  btn?.addEventListener("click", send);
+}
+function autosize(i){ i.style.height = "auto"; i.style.height = Math.min(i.scrollHeight, 200) + "px"; }
+function mentionPopup(i, c){
+  const pop = $("#mpop");
+  const before = i.value.slice(0, i.selectionStart);
+  const m = before.match(/@([\p{L}\p{N}_-]*)$/u);
+  if (!m || !c){ pop.classList.remove("show"); return; }
+  const pool = (c.type === "group" ? c.agentIds.map(agentById) : S.agents).filter(Boolean).filter(a => norm(a.name).startsWith(norm(m[1])));
+  if (!pool.length){ pop.classList.remove("show"); return; }
+  pop.innerHTML = pool.map((a, k) => `<button class="${k ? "" : "sel"}" data-h="${esc(handle(a))}">${avatar(a,"xs")} ${esc(a.name)} <span style="color:var(--faint);font-size:12px">${esc(a.role)}</span></button>`).join("");
+  pop.classList.add("show");
+  pop.querySelectorAll("button").forEach(b => b.onclick = ev => {
+    ev.stopPropagation();
+    const start = before.length - m[0].length;
+    i.value = i.value.slice(0, start) + b.dataset.h + " " + i.value.slice(i.selectionStart);
+    pop.classList.remove("show"); i.focus(); $("#sendBtn") && ($("#sendBtn").disabled = false);
+  });
+}
+
+/* ---------------- Modals ---------------- */
+function openModal(html){ $("#modal").innerHTML = html; $("#backdrop").classList.add("show"); setTimeout(() => $("#modal input, #modal textarea")?.focus(), 30); }
+function closeModal(){ $("#backdrop").classList.remove("show"); }
+
+function openAgentModal(agent){
+  const isNew = !agent;
+  const a = agent ? { ...agent } : { name:"", emoji:"🤖", color:COLORS[S.agents.length % COLORS.length], role:"", instructions:"", model:"claude-opus-5-5" };
+  openModal(`<header><h2>${isNew ? "Créer un agent" : "Modifier l'agent"}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">✕</button></header>
+  <div class="mbody">
+    ${isNew ? `<p class="lead">Pars d'un modèle prêt à l'emploi, ou remplis simplement les champs. Tu pourras tout changer plus tard.</p>
+    <div class="tpl-grid">${TEMPLATES.map((t, k) => `<button class="tpl" data-tpl="${k}"><span class="e">${t.e}</span>${esc(t.name)}</button>`).join("")}</div>` : ""}
+    <div class="row">
+      <div style="flex:2"><label class="f">Nom</label><input class="inp" id="fName" maxlength="24" placeholder="Ex : Léa la rédactrice" value="${esc(a.name)}"></div>
+      <div><label class="f">Spécialité</label><input class="inp" id="fRole" maxlength="40" placeholder="Ex : Posts LinkedIn" value="${esc(a.role)}"></div>
+    </div>
+    <label class="f">Icône</label>
+    <div class="emoji-row" id="fEmoji">${EMOJIS.map(x => `<button class="${x === a.emoji ? "sel" : ""}" data-e="${x}">${x}</button>`).join("")}</div>
+    <label class="f">Que doit faire cet agent ? <small>— écris comme si tu briefais un collègue</small></label>
+    <textarea class="inp" id="fInstr" placeholder="Ex : Tu m'aides à écrire des posts LinkedIn courts, avec une accroche forte et un ton direct. Tu me poses une question si le sujet n'est pas clair.">${esc(a.instructions)}</textarea>
+    <label class="f">Modèle</label>
+    <select class="inp" id="fModel">${MODELS.map(m => `<option value="${m.id}" ${m.id === a.model ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select>
+  </div>
+  <footer>${isNew ? "" : `<button class="btn danger" id="fDel" style="margin-right:auto">Supprimer</button>`}<button class="btn" data-act="close">Annuler</button><button class="btn primary" id="fSave">${isNew ? "Créer l'agent" : "Enregistrer"}</button></footer>`);
+
+  let emoji = a.emoji;
+  $("#modal").querySelectorAll("[data-tpl]").forEach(b => b.onclick = () => {
+    const t = TEMPLATES[+b.dataset.tpl];
+    $("#modal").querySelectorAll(".tpl").forEach(x => x.classList.toggle("sel", x === b));
+    $("#fName").value = t.name; $("#fRole").value = t.role; $("#fInstr").value = t.instr; emoji = t.e;
+    $("#fEmoji").querySelectorAll("button").forEach(x => x.classList.toggle("sel", x.dataset.e === t.e));
+  });
+  $("#fEmoji").querySelectorAll("button").forEach(b => b.onclick = () => { emoji = b.dataset.e; $("#fEmoji").querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b)); });
+  $("#fDel")?.addEventListener("click", () => { closeModal(); deleteAgent(agent.id); });
+  $("#fSave").onclick = () => {
+    const name = $("#fName").value.trim();
+    if (!name){ $("#fName").focus(); toast("Donne un nom à ton agent"); return; }
+    if (S.agents.some(x => x.id !== agent?.id && norm(x.name) === norm(name))){ toast("Un agent porte déjà ce nom"); return; }
+    const data = { name, emoji, role:$("#fRole").value.trim(), instructions:$("#fInstr").value.trim(), model:$("#fModel").value };
+    if (isNew){
+      const na = { id:uid(), color:a.color, created:Date.now(), ...data };
+      S.agents.push(na); current = directConv(na.id).id; toast(`${na.emoji} ${na.name} est prêt !`);
+    } else Object.assign(agent, data);
+    save(); closeModal(); render();
+  };
+}
+
+function deleteAgent(id){
+  const a = agentById(id); if (!a || !confirm(`Supprimer ${a.name} et sa conversation ?`)) return;
+  S.agents = S.agents.filter(x => x.id !== id);
+  S.convs = S.convs.filter(c => !(c.type === "direct" && c.agentIds[0] === id));
+  for (const c of S.convs) c.agentIds = c.agentIds.filter(x => x !== id);
+  if (current && !convById(current)) current = null;
+  save(); render();
+}
+
+function openGroupModal(group){
+  if (S.agents.length < 2){ toast("Crée au moins 2 agents pour faire un groupe"); openAgentModal(); return; }
+  const isNew = !group;
+  const sel = new Set(group ? group.agentIds : S.agents.slice(0, 3).map(a => a.id));
+  let leader = group ? group.agentIds[0] : (S.agents.find(a => norm(a.name).includes("chef")) || S.agents[0]).id;
+  openModal(`<header><h2>${isNew ? "Nouveau groupe" : "Modifier le groupe"}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">✕</button></header>
+  <div class="mbody">
+    ${isNew ? `<p class="lead">Un groupe, c'est une équipe d'agents. Le chef découpe ton objectif en tâches, chacun s'occupe de la sienne, ils se répondent avec des @mentions puis le chef te fait la synthèse.</p>` : ""}
+    <label class="f">Nom du groupe</label><input class="inp" id="gName" maxlength="40" placeholder="Ex : Équipe lancement produit" value="${esc(group?.title || "")}">
+    <label class="f">Membres</label>
+    <div class="pick">${S.agents.map(a => `<label><input type="checkbox" value="${a.id}" ${sel.has(a.id) ? "checked" : ""}> ${avatar(a,"xs")} ${esc(a.name)}</label>`).join("")}</div>
+    <label class="f">Chef d'équipe <small>— il répartit les tâches et conclut</small></label>
+    <select class="inp" id="gLeader"></select>
+    <label class="f">Objectif <small>(facultatif)</small></label>
+    <textarea class="inp" id="gGoal" placeholder="Ex : Préparer le lancement de ma newsletter : nom, ligne éditoriale, premier article et plan de promotion.">${esc(group?.goal || "")}</textarea>
+  </div>
+  <footer><button class="btn" data-act="close">Annuler</button><button class="btn primary" id="gSave">${isNew ? "Créer le groupe" : "Enregistrer"}</button></footer>`);
+  const fillLeader = () => {
+    const ids = [...$("#modal").querySelectorAll(".pick input:checked")].map(x => x.value);
+    if (!ids.includes(leader)) leader = ids[0];
+    $("#gLeader").innerHTML = ids.map(id => { const a = agentById(id); return `<option value="${id}" ${id === leader ? "selected" : ""}>${esc(a.emoji + " " + a.name)}</option>`; }).join("");
+  };
+  fillLeader();
+  $("#modal").querySelectorAll(".pick input").forEach(x => x.onchange = fillLeader);
+  $("#gLeader").onchange = e => leader = e.target.value;
+  $("#gSave").onclick = () => {
+    const ids = [...$("#modal").querySelectorAll(".pick input:checked")].map(x => x.value);
+    if (ids.length < 2){ toast("Choisis au moins 2 agents"); return; }
+    const ordered = [leader, ...ids.filter(x => x !== leader)];
+    const title = $("#gName").value.trim() || ordered.map(id => agentById(id).name).join(", ");
+    const goal = $("#gGoal").value.trim();
+    if (isNew){
+      const g = { id:uid(), type:"group", title, goal, agentIds:ordered, messages:[], tasks:[], auto:true, updated:Date.now() };
+      S.convs.push(g); current = g.id;
+    } else Object.assign(group, { title, goal, agentIds:ordered });
+    save(); closeModal(); render();
+  };
+}
+
+function demoGroup(){
+  if (S.agents.length < 2){ openAgentModal(); return; }
+  const ids = S.agents.slice(0, 4).map(a => a.id);
+  const g = { id:uid(), type:"group", title:"Équipe newsletter", goal:"Préparer le lancement d'une newsletter sur l'IA pour débutants : nom, ligne éditoriale, premier article et plan de promotion.", agentIds:ids, messages:[], tasks:[], auto:true, updated:Date.now() };
+  S.convs.push(g); current = g.id; save(); render();
+}
+
+function openSettings(){
+  const st = S.settings;
+  openModal(`<header><h2>Réglages</h2><button class="icon-btn" data-act="close" aria-label="Fermer">✕</button></header>
+  <div class="mbody">
+    <label class="f">Clé API Anthropic</label>
+    <input class="inp" id="sKey" type="password" placeholder="sk-ant-…" value="${esc(st.apiKey)}" autocomplete="off">
+    <div class="note">Sans clé, l'app tourne en <b>mode démo</b> (réponses simulées) pour que tu puisses découvrir l'interface. Pour de vraies réponses, crée une clé sur <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">platform.claude.com</a>. Elle reste uniquement dans ce navigateur et n'est envoyée qu'à l'API d'Anthropic. N'utilise pas cette page sur un ordinateur partagé.</div>
+    <label class="f">Réflexion des agents</label>
+    <div class="seg" id="sEffort">${[["low","Rapide"],["medium","Équilibrée"],["high","Approfondie"]].map(([v,l]) => `<button data-v="${v}" class="${st.effort === v ? "sel" : ""}">${l}</button>`).join("")}</div>
+    <label class="f">Nombre max. de prises de parole par objectif (groupes)</label>
+    <input class="inp" id="sTurns" type="number" min="2" max="30" value="${st.maxTurns}">
+    <label class="f">Données</label>
+    <div class="row"><button class="btn" id="sExport">⬇ Exporter</button><button class="btn" id="sImport">⬆ Importer</button><button class="btn danger" id="sReset">Tout effacer</button></div>
+  </div>
+  <footer><button class="btn" data-act="close">Annuler</button><button class="btn primary" id="sSave">Enregistrer</button></footer>`);
+  let effort = st.effort;
+  $("#sEffort").querySelectorAll("button").forEach(b => b.onclick = () => { effort = b.dataset.v; $("#sEffort").querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b)); });
+  $("#sSave").onclick = () => { st.apiKey = $("#sKey").value.trim(); st.effort = effort; st.maxTurns = Math.max(2, Math.min(30, +$("#sTurns").value || 8)); client = null; save(); closeModal(); render(); toast(st.apiKey ? "Connecté à Claude" : "Mode démo"); };
+  $("#sExport").onclick = () => {
+    const data = { ...S, settings:{ ...S.settings, apiKey:"" } };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type:"application/json" }));
+    Object.assign(document.createElement("a"), { href:url, download:"ruche-agents.json" }).click(); URL.revokeObjectURL(url);
+  };
+  $("#sImport").onclick = () => {
+    const f = Object.assign(document.createElement("input"), { type:"file", accept:".json,application/json" });
+    f.onchange = async () => { try{ const d = JSON.parse(await f.files[0].text()); if (!Array.isArray(d.agents)) throw 0; d.settings = { ...d.settings, apiKey:S.settings.apiKey }; S = d; current = null; save(); closeModal(); render(); toast("Import réussi"); }catch{ toast("Fichier invalide"); } };
+    f.click();
+  };
+  $("#sReset").onclick = () => { if (confirm("Effacer tous les agents, groupes et messages ?")){ const key = S.settings.apiKey; S = seed(); S.settings.apiKey = key; current = null; save(); closeModal(); render(); } };
+}
+
+/* ---------------- Claude ---------------- */
+let client = null;
+async function getClient(){
+  if (client) return client;
+  const { default: Anthropic } = await import(SDK_URL);
+  client = new Anthropic({ apiKey:S.settings.apiKey, dangerouslyAllowBrowser:true });
+  return client;
+}
+
+/** Convertit la conversation (multi-auteurs) en messages user/assistant du point de vue de l'agent `a`. */
+function toApiMessages(c, a, finalInstruction){
+  const out = [];
+  const push = (role, text) => {
+    if (!text) return;
+    const last = out[out.length - 1];
+    if (last && last.role === role) last.content += "\n\n" + text; else out.push({ role, content:text });
+  };
+  for (const m of c.messages){
+    if (!m.text || m.error) continue;
+    if (m.author === a.id) push("assistant", m.text);
+    else if (m.author === "user") push("user", c.type === "group" ? `[Utilisateur] ${m.text}` : m.text);
+    else if (m.author === "system") push("user", `[Info] ${m.text}`);
+    else push("user", `[${agentById(m.author)?.name || "Agent"}] ${m.text}`);
+  }
+  if (finalInstruction) push("user", finalInstruction);
+  if (out[0]?.role === "assistant") out.unshift({ role:"user", content:"(début de la conversation)" });
+  if (!out.length || out[out.length - 1].role !== "user") push("user", "Continue.");
+  return out;
+}
+
+function systemFor(a, c){
+  let s = `Tu es « ${a.name} »${a.role ? `, spécialité : ${a.role}` : ""}.\n${a.instructions || ""}\n\nRéponds en français (sauf demande contraire), de façon claire et concise. Utilise du Markdown simple si utile.`;
+  if (c.type === "group"){
+    const members = c.agentIds.map(agentById).filter(Boolean);
+    s += `\n\nTu fais partie d'une équipe dans une discussion de groupe avec l'utilisateur.
+Membres : ${members.map((m, i) => `${handle(m)} (${m.role || "généraliste"})${i === 0 ? " — chef d'équipe" : ""}`).join(", ")}.
+${c.goal ? `Objectif de l'équipe : ${c.goal}` : ""}
+Règles : les messages des autres sont préfixés par [Nom]. N'écris jamais de préfixe [Nom] toi-même. Ne parle qu'en ton nom. Va droit au but (200 mots max sauf livrable). Pour demander quelque chose à un collègue, mentionne-le avec son @Nom ; ne mentionne personne si tu n'as rien à lui demander.`;
+  }
+  return s;
+}
+
+/** Appelle Claude en streaming ; onText reçoit le texte cumulé. */
+async function callClaude(a, c, instruction, onText, signal){
+  if (!S.settings.apiKey) return demoReply(a, c, instruction, onText, signal);
+  const cl = await getClient();
+  const params = {
+    model:a.model || "claude-opus-5-5",
+    max_tokens:16000,
+    system:systemFor(a, c),
+    messages:toApiMessages(c, a, instruction),
+    output_config:{ effort:S.settings.effort || "medium" },
+  };
+  // Repli automatique côté serveur si un modèle refuse (Opus/Sonnet uniquement)
+  if (params.model !== "claude-haiku-5-5"){ params.betas = ["server-side-fallback-2026-07-01"]; params.fallbacks = "default"; }
+  const stream = cl.beta.messages.stream(params, { signal });
+  let text = "";
+  stream.on("text", d => { text += d; onText(text); });
+  const final = await stream.finalMessage();
+  if (final.stop_reason === "refusal") throw new Error("La demande a été refusée par les garde-fous du modèle.");
+  return text || final.content.filter(b => b.type === "text").map(b => b.text).join("");
+}
+
+/* ---- Mode démo : réponses simulées pour découvrir l'interface ---- */
+const sleep = (ms, signal) => new Promise((res, rej) => { const t = setTimeout(res, ms); signal?.addEventListener("abort", () => { clearTimeout(t); rej(new DOMException("Arrêté", "AbortError")); }, { once:true }); });
+async function demoReply(a, c, instruction, onText, signal){
+  await sleep(500 + Math.random() * 500, signal);
+  const lastUser = [...c.messages].reverse().find(m => m.author === "user")?.text || "";
+  let txt;
+  if (instruction?.includes("PLAN_JSON")){
+    const others = c.agentIds.slice(1).map(agentById).filter(Boolean);
+    const ideas = ["Rassembler les informations clés", "Rédiger une première version", "Relire et proposer des améliorations", "Chiffrer les options", "Proposer un plan d'action"];
+    const plan = others.map((o, k) => ({ assignee:handle(o).slice(1), task:`${ideas[k % ideas.length]} (${o.role || o.name})` }));
+    txt = `Bien reçu ! Voici comment on s'organise :\n\n${plan.map(p => `- **@${p.assignee}** : ${p.task}`).join("\n")}\n\nJe ferai la synthèse à la fin.\n\nPLAN_JSON ${JSON.stringify(plan)}`;
+  } else if (instruction?.includes("synthèse finale")){
+    txt = `## Synthèse de l'équipe\n\nMerci à tous. En résumé :\n\n${c.tasks.map(t => `- **${t.title}** — fait par ${agentById(t.assignee)?.name}`).join("\n")}\n\n**Prochaine étape :** valide ce plan ou demande-nous d'approfondir un point.\n\n*(Réponse simulée — ajoute ta clé API dans ⚙️ pour un vrai travail d'équipe.)*`;
+  } else if (instruction?.startsWith("C'est à toi")){
+    txt = `Bien vu, je m'en occupe : j'ai vérifié ce point et il tient la route, avec une réserve mineure à garder en tête. 👍`;
+  } else if (instruction?.startsWith("Ta tâche")){
+    const next = c.agentIds.map(agentById).filter(x => x && x.id !== a.id && x.id !== c.agentIds[0]);
+    const peer = Math.random() < 0.4 && next[0] ? next[0] : null;
+    txt = `C'est parti pour ma partie. En tant que ${a.role.toLowerCase() || "membre de l'équipe"}, je propose :\n\n1. Un premier point concret sur « ${plain(lastUser).slice(0, 60)} »\n2. Une piste à creuser\n3. Un point de vigilance\n\n${peer ? `${handle(peer)}, tu peux vérifier le point 3 de ton côté ?` : "Ma tâche est terminée ✅"}`;
+  } else {
+    txt = `Bonjour, je suis **${a.name}** ${a.emoji}. Tu m'as écrit : « ${plain(lastUser).slice(0, 120)} ».\n\nEn mode démo, je ne fais que simuler une réponse. Ajoute une clé API dans les réglages ⚙️ et je pourrai vraiment t'aider (${a.role || "généraliste"}).`;
+  }
+  let out = "";
+  for (const w of txt.split(/(\s+)/)){ out += w; onText(out); await sleep(12, signal); }
+  return txt;
+}
+
+/* ---------------- Envoi & orchestration ---------------- */
+async function send(){
+  const i = $("#input"); const c = convById(current);
+  if (!i || !c || running) return;
+  const text = i.value.trim(); if (!text) return;
+  i.value = ""; autosize(i);
+  c.messages.push({ id:uid(), author:"user", text, ts:Date.now() }); c.updated = Date.now();
+  save(); render();
+  running = { convId:c.id, abort:new AbortController(), speaking:null };
+  try{
+    if (c.type === "direct") await agentTurn(c, agentById(c.agentIds[0]), null);
+    else await runGroup(c, text);
+  }catch(err){
+    if (err?.name === "AbortError" || running?.abort.signal.aborted) sys(c, "⏹ Arrêté.");
+    else sys(c, "⚠️ " + friendlyError(err), true);
+  }finally{
+    running = null; save(); render();
+  }
+}
+function friendlyError(err){
+  const s = err?.status;
+  if (s === 401) return "Clé API invalide. Vérifie-la dans les réglages ⚙️.";
+  if (s === 429) return "Trop de requêtes : attends quelques secondes et réessaie.";
+  if (s === 400 && /credit|billing/i.test(err.message)) return "Crédit insuffisant sur ton compte Anthropic.";
+  if (s >= 500) return "Le service est momentanément indisponible. Réessaie dans un instant.";
+  if (/Failed to fetch|NetworkError|import/i.test(err?.message || "")) return "Impossible de joindre l'API (connexion ou bloqueur de contenu ?).";
+  return err?.message || "Erreur inconnue.";
+}
+function sys(c, text, error = false){ c.messages.push({ id:uid(), author:"system", text, error, ts:Date.now() }); c.updated = Date.now(); save(); if (current === c.id) renderMain(); renderList(); }
+
+/** Fait parler un agent ; renvoie son texte. */
+async function agentTurn(c, a, instruction, taskId){
+  if (!a) return "";
+  running.speaking = a.id; running.msgId = null; if (current === c.id) renderMain(); renderList();
+  const msg = { id:uid(), author:a.id, text:"", ts:Date.now(), taskId };
+  let added = false, raf = 0;
+  const onText = t => {
+    msg.text = t.replace(/\n*PLAN_JSON[\s\S]*$/, "").trim();
+    if (!added){ c.messages.push(msg); added = true; running.msgId = msg.id; }
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (current === c.id) paintLast(c, msg); });
+  };
+  let full;
+  try{ full = await callClaude(a, c, instruction, onText, running.abort.signal); }
+  finally{ cancelAnimationFrame(raf); raf = 0; if (added && !msg.text) c.messages = c.messages.filter(m => m !== msg); }
+  if (!added){ c.messages.push(msg); }
+  msg.text = full.replace(/\n*PLAN_JSON[\s\S]*$/, "").trim();
+  c.updated = Date.now(); running.speaking = null; save();
+  if (current === c.id) renderMain(); renderList();
+  return full;
+}
+/** Met à jour le dernier message en streaming sans tout redessiner. */
+function paintLast(c, msg){
+  const box = $("#msgs"); if (!box) return;
+  const inner = box.querySelector(".msgs-inner");
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+  let el = inner.querySelector(`[data-mid="${msg.id}"]`);
+  if (!el){
+    inner.querySelector(".typing")?.closest(".msg")?.remove();
+    inner.querySelector(".hero")?.remove();
+    inner.insertAdjacentHTML("beforeend", messageHTML(msg, c));
+    el = inner.querySelector(`[data-mid="${msg.id}"]`);
+  } else el.querySelector(".content").innerHTML = md(msg.text);
+  if (nearBottom) box.scrollTop = box.scrollHeight;
+}
+
+async function runGroup(c, userText){
+  const members = c.agentIds.map(agentById).filter(Boolean);
+  const leader = members[0];
+  const maxTurns = S.settings.maxTurns || 8;
+  let turns = 0;
+  const queue = [];
+  const enqueue = (a, why) => { if (a && !queue.some(q => q.a.id === a.id)) queue.push({ a, why }); };
+
+  const direct = mentionedAgents(userText, members);
+  if (direct.length){
+    // L'utilisateur s'adresse à des agents précis
+    direct.forEach(a => enqueue(a));
+  } else {
+    // Nouvel objectif : le chef planifie
+    if (!c.goal) c.goal = userText;
+    const others = members.slice(1);
+    const planInstr = `[Consigne interne pour ${leader.name}] Tu es le chef d'équipe. Découpe la demande de l'utilisateur en une tâche par membre utile parmi : ${others.map(o => handle(o)).join(", ")}. Écris un court message à l'équipe qui annonce qui fait quoi (avec les @mentions). Puis termine OBLIGATOIREMENT par une dernière ligne au format exact :\nPLAN_JSON [{"assignee":"NomSansEspace","task":"intitulé court"}]\nSi la demande est une simple question, réponds-y toi-même et termine par PLAN_JSON [].`;
+    const full = await agentTurn(c, leader, planInstr); turns++;
+    let plan = [];
+    const m = full.match(/PLAN_JSON\s*(\[[\s\S]*\])/);
+    if (m){ try{ plan = JSON.parse(m[1]); }catch{} }
+    if (!m) plan = mentionedAgents(full, others).map(a => ({ assignee:a.name, task:`Contribution de ${a.name}` }));
+    c.tasks = [];
+    for (const p of plan){
+      const a = members.find(x => norm(x.name) === norm(String(p.assignee || "").replace(/^@/, "")));
+      if (a && a.id !== leader.id) c.tasks.push({ id:uid(), title:String(p.task || "Tâche").slice(0, 120), assignee:a.id, status:"todo" });
+    }
+    save(); renderPanel();
+    if (!c.tasks.length) return;
+    if (c.auto === false){ sys(c, "Collaboration auto désactivée : @mentionne un agent pour le faire travailler."); return; }
+  }
+
+  // Exécution : tâches assignées puis demandes d'entraide par @mention
+  const pending = () => c.tasks.find(t => t.status === "todo");
+  while (turns < maxTurns){
+    if (running.abort.signal.aborted) throw new DOMException("Arrêté", "AbortError");
+    let a, instr, task;
+    if (queue.length){
+      ({ a } = queue.shift());
+      instr = `C'est à toi, ${a.name}. Réponds à ce qu'on te demande dans la discussion ci-dessus.`;
+    } else if ((task = pending())){
+      a = agentById(task.assignee); task.status = "doing"; save(); renderPanel();
+      instr = `Ta tâche : « ${task.title} ». Réalise-la maintenant en t'appuyant sur ce qui a déjà été dit. Livre un résultat concret.`;
+    } else break;
+    const out = await agentTurn(c, a, instr, task?.id); turns++;
+    if (task){ task.status = "done"; save(); renderPanel(); }
+    if (c.auto !== false) mentionedAgents(out, members).filter(x => x.id !== a.id).forEach(x => enqueue(x));
+  }
+  if (turns >= maxTurns && (queue.length || pending())) sys(c, `Limite de ${maxTurns} prises de parole atteinte (modifiable dans ⚙️).`);
+
+  // Synthèse par le chef si un plan a été exécuté
+  if (!direct.length && c.tasks.length){
+    await agentTurn(c, leader, `[Consigne interne pour ${leader.name}] Toutes les tâches sont terminées. Rédige la synthèse finale pour l'utilisateur : le livrable consolidé, clair et actionnable, puis une ou deux prochaines étapes. Ne mentionne aucun membre avec @.`);
+  }
+}
+
+/* ---------------- Init ---------------- */
+if (current && !convById(current)) current = null;
+render();
+setInterval(renderList, 60000);
+</script>
+</body>
+</html>
